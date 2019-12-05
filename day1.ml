@@ -8,7 +8,7 @@ let input = [149895; 89996; 98406; 105129; 81621; 118239; 76034; 75248; 145049; 
 
 print_endline ("Part 1 " ^ string_of_int (sum_of_fuel required_fuel input));;
 
-(* sum the values of f^k(x) (k >= 1) until f^n(x) = 0 *)
+(* sum the values of f^k(x) from k = 1 until f^k(x) = 0 *)
 let fixed_point_sum f x =
   let rec accumulate_till_zero acc x =
   let y = f x in
