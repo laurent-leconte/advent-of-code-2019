@@ -12,7 +12,7 @@ print_endline ("Part 1 " ^ string_of_int (sum_of_fuel required_fuel input));;
 let fixed_point_sum f x =
   let rec accumulate_till_zero acc x =
   let y = f x in
-	if y = 0 then acc else accumulate_till_zero (acc + y) y in
+    if y = 0 then acc else accumulate_till_zero (acc + y) y in
   accumulate_till_zero 0 x;;
   
 let complete_required_fuel = fixed_point_sum required_fuel;;
