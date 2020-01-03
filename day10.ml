@@ -3,19 +3,30 @@ type point = {x: int; y: int}
 module Direction =
   struct
     type t = point
+    
+    let is_zero p = (p.x = 0) && (p.y = 0)
+    
+    let angle p =
+      let n = sqrt (float_of_int (p.x*p.x + p.y*p.y)) in
+      let theta = acos ((float_of_int p.y) /. n) in
+      let pi = acos (-1.0) in
+      if p.x >= 0 then theta else 2.*.pi -. theta
+    
     let compare p q =
     (* comparison rules: 
     * 0 = 0
-    * 0 != _
-    * a = b iff same direction and orientation *)
-      let is_zero p = (p.x = 0) && (p.y = 0) in
-      if (is_zero p) <> (is_zero q) then min_int
-      else begin
+    * 0 < _
+    * a = b iff same direction and orientation 
+    * otherwise angle from y-axis is used for comparison *)
+      if p = q          then 0    (* handles equality, including 0 = 0 *)
+      else if is_zero p then (-1) (* 0 is smaller than everything *)
+      else if is_zero q then 1
+      else (* p, q are non-zero and different *)
+      begin
         let x0, y0 = p.x, p.y in
         let x1, y1 = q.x, q.y in
-        match x0*y1 - y0*x1 with
-        | 0 -> if x0*x1 >= 0 then 0 else min_int
-        | c -> c
+        if x0*y1 - y0*x1 = 0 && x0*x1 >= 0 then 0 (* use integer precision for equality *)
+        else compare (angle p) (angle q)
       end
   end
 
@@ -31,12 +42,7 @@ let rec gcd a = function
   | 0 -> a
   | b -> gcd b (a mod b)
 
-let delta p1 p2 =
-  let dx = p2.x - p1.x in
-  let dy = p2.y - p1.y in
-  let g = abs (gcd dx dy) in
-  if g = 0 then {x=0; y=0} else {x= dx/g; y= dy/g}
-
+let delta p1 p2 = {x = p2.x - p1.x; y = p2.y - p1.y}
 
 (* count how many other points are visible from `here` *)
 let count_visible points here =
