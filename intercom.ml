@@ -1,7 +1,11 @@
-type operation = Halt | Input | Output | Add | Mul | JumpTrue | JumpFalse | LessThan | Equals
-type mode = Position | Immediate
+type operation = Halt | Input | Output | Add | Mul | JumpTrue | JumpFalse | LessThan | Equals | AdjustRB
+type mode = Position | Immediate | Relative
 type instruction = {opcode:operation; c:mode; b:mode; a:mode}
-type program = {ram: int array; mutable ip: int; mutable input: int list; mutable output: int list}
+type program = {ram: int array; 
+                mutable ip: int; (* instruction pointer *)
+                mutable rb : int; (* relative base *)
+                mutable input: int list; 
+                mutable output: int list}
 
 let string_of_operation = function
   | Halt -> "halt"
@@ -13,15 +17,18 @@ let string_of_operation = function
   | JumpFalse -> "jump if false"
   | LessThan -> "less than"
   | Equals -> "equals"
+  | AdjustRB -> "adjust relative base"
 
 let string_of_mode = function
   | Position -> "0"
   | Immediate -> "1"
+  | Relative -> "2"
 
 let instruction_of_int n =
   let match_mode = function
     | 0 -> Position
-    | 1 -> Immediate 
+    | 1 -> Immediate
+    | 2 -> Relative
     | n -> failwith ("Unknown mode " ^ (string_of_int n)) in
   let operation = match (n mod 100) with
     | 1 -> Add
@@ -32,6 +39,7 @@ let instruction_of_int n =
     | 6 -> JumpFalse
     | 7 -> LessThan
     | 8 -> Equals
+    | 9 -> AdjustRB
     | 99 -> Halt
     | _ -> failwith ("Unknown opcode " ^ (string_of_int n)) in
   let c_mode = match_mode ((n / 100) mod 10) in
@@ -44,8 +52,9 @@ let string_of_instruction op =
   Printf.sprintf "%s %s%s%s" operation_string (string_of_mode op.c) (string_of_mode op.b) (string_of_mode op.a)
 
 let init_program (prog, inputs) =
-  {ram = Array.copy prog;
+  {ram = Array.append (Array.copy prog) (Array.make 100000 0);
    ip = 0;
+   rb = 0;
    input = inputs;
    output = []}
 
@@ -66,14 +75,16 @@ let binary_operation op a b =
     | _ -> failwith ("Unknown binary operation")
 
 (* return the referenced value based on the addressing mode *)
-let operand program index = function
-  | Immediate -> program.(index)
-  | Position  -> program.(program.(index))
+let operand prog index = function
+  | Immediate -> prog.ram.(index)
+  | Position  -> prog.ram.(prog.ram.(index))
+  | Relative  -> prog.ram.(prog.ram.(index) + prog.rb)
 
 (* write the result of an instruction to the stack *)
-let write program value index = function
-  | Immediate -> program.(index) <- value
-  | Position  -> program.(program.(index)) <- value
+let write prog value index = function
+  | Immediate -> prog.ram.(index) <- value
+  | Position  -> prog.ram.(prog.ram.(index)) <- value
+  | Relative  -> prog.ram.(prog.ram.(index) + prog.rb) <- value
 
 (* should we jump ? *)
 let jump = function
@@ -89,26 +100,30 @@ let rec execute prog =
   let op = instruction_of_int prog.ram.(ip) in
   match op.opcode with
     | Halt     -> prog
-    | Output   -> let output_value = operand prog.ram (ip + 1) op.c in
+    | Output   -> let output_value = operand prog (ip + 1) op.c in
                   print_endline (string_of_int output_value);
                   prog.output <- output_value::prog.output;
                   prog.ip <- ip + 2;
                   execute prog
     | Input    -> let input = read_input prog in
-                  write prog.ram input (ip + 1) Position;
+                  write prog input (ip + 1) op.c;
                   prog.ip <- ip + 2;
-                    execute prog
+                  execute prog
+    | AdjustRB -> let op1 = operand prog (ip + 1) op.c in
+                  prog.rb <- prog.rb + op1;
+                  prog.ip <- ip + 2;
+                  execute prog
     | JumpTrue | JumpFalse as j
-               -> let op1 = operand prog.ram (ip + 1) op.c in
-                  let target = operand prog.ram (ip + 2) op.b in
+               -> let op1 = operand prog (ip + 1) op.c in
+                  let target = operand prog (ip + 2) op.b in
                   if jump (j, op1) then
                     prog.ip <- target
                   else
                     prog.ip <- ip + 3;
                   execute prog
-	| bin_op   -> let op1 = operand prog.ram (ip + 1) op.c in
-                  let op2 = operand prog.ram (ip + 2) op.b in
+	| bin_op   -> let op1 = operand prog (ip + 1) op.c in
+                  let op2 = operand prog (ip + 2) op.b in
 	              let result = binary_operation bin_op op1 op2 in
-                  write prog.ram result (ip + 3) op.a;
+                  write prog result (ip + 3) op.a;
                   prog.ip <- ip + 4;
                   execute prog
