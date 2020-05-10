@@ -1,4 +1,5 @@
 #load "intercom.cmo";;
+#load "utils.cmo";;
 
 type color = Black | White
 
@@ -107,18 +108,6 @@ let string_of_color = function
   | Black -> " "
   | White -> "#"
 
-let rec transpose = function
-   | [] 
-   | [] :: _ -> []
-   | rows    -> 
-       List.map List.hd rows :: transpose (List.map List.tl rows)
-
-let print_canvas canvas = 
-  let lists = Array.to_list (Array.map Array.to_list canvas) in
-  let print_line l = 
-    l |> List.map (string_of_color) |> String.concat "" |> print_endline in
-  List.map print_line (List.rev (transpose lists))
-
 (* let print_canvas canvas width height =
   for j = 0 to height do
     for i = 0 to width do
@@ -132,7 +121,7 @@ let xmin, xmax, ymin, ymax = robot.action_log
   
 let canvas = paint (xmin, xmax, ymin, ymax) robot.action_log
 
-let  _ = print_canvas canvas
+let  _ = Utils.print_canvas string_of_color canvas
 
 
 

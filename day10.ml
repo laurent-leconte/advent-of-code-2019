@@ -131,8 +131,8 @@ let build_alignment_from here points =
 
 (* equivalent to List.map List.tl but ignores empty lists and empty tails *)
 let rec map_tl = function
-  | []      -> []
-  | []::xs 
+  | []           -> []
+  | []::xs
   | (_::[])::xs  -> map_tl xs
   | (_::xs)::xss -> xs :: map_tl xss
 

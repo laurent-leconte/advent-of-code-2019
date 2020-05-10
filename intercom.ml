@@ -58,6 +58,8 @@ let string_of_instruction op =
 (* print the outputs of a program *)
 let print_outputs prog =
   prog.output |> List.map string_of_int |> String.concat " " |> print_endline
+  
+let get_output prog = prog.output
 
 let init_program (prog, inputs) =
   {ram = Array.append (Array.copy prog) (Array.make 100000 0);
