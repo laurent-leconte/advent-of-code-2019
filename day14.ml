@@ -15,7 +15,7 @@ let parse_line l =
   let raw_inputs = split_on_string ", " input in
   let tuple_from_raw str =
     let quantity::ingredient::_ = split_on_string " " str in
-    (ingredient, int_of_string quantity) in
+    (ingredient, float_of_string quantity) in
   (* create formula hash table, add the output quantity *)
   let formula = Hashtbl.create (List.length raw_inputs + 1) in
   let output_name, output_qt = tuple_from_raw output in
@@ -34,7 +34,7 @@ let formula_output f = fst (List.hd f)
 let list_of_hash h =
   let f k v acc = (k,v) :: acc in
   Hashtbl.fold f h []
-let string_of_ingredient a = (string_of_int @@ snd a) ^ " " ^ (fst a)
+let string_of_ingredient a = (string_of_float @@ snd a) ^ " " ^ (fst a)
 let string_of_formula f = f
  |> list_of_hash
  |> List.map string_of_ingredient
@@ -109,28 +109,28 @@ let expand_fuel_formula cookbook =
     | ["ORE"] -> fuel_formula 
     | a::tl   -> (* replace a with its ingredients in "FUEL" formula *)
                  (* first, get formulas and quantities *)
-                 print_endline ("Expanding ingredient " ^ a);
+                 (* print_endline ("Expanding ingredient " ^ a); *)
                  let a_formula = Hashtbl.find cookbook a in
                  let get_quantity ingredient = 
                    (match Hashtbl.find_opt fuel_formula ingredient with
                      | Some q -> q
-                     | None -> 0) in
+                     | None -> 0.) in
                  let needed_qt = get_quantity a in
                  Hashtbl.remove fuel_formula a;
-                 if needed_qt = 0 then ( 
+                 if needed_qt = 0. then ( 
                    print_endline "Nothing to do, moving to next ingredient";
                    expand tl) (* a is not used in the fuel formula, move on *)
                  else (
                    let output_qt = Hashtbl.find a_formula "output" in
-                   let mult_qt = ( * ) ((needed_qt - 1) / output_qt + 1) in
+                   let mult_qt = ( *. ) (needed_qt /. output_qt) in
                    Hashtbl.remove a_formula "output";
                    (* iterate over a's ingredients and add them to the fuel formula *)
                    let add_ingredient ing qt =
                      let prev_qt = get_quantity ing in
-                     let new_qt = prev_qt + (mult_qt qt) in
+                     let new_qt = prev_qt +. (mult_qt qt) in
                      Hashtbl.replace fuel_formula ing new_qt; in
                    Hashtbl.iter add_ingredient a_formula;
-                   print_endline ("Fuel formula after expansion: " ^ (string_of_formula fuel_formula));
+                   (* print_endline ("Fuel formula after expansion: " ^ (string_of_formula fuel_formula)); *)
                    expand tl) in
   let expansion_order = cookbook
     |> dependency_map
@@ -146,4 +146,17 @@ let part1 file =
     |> string_of_formula
     |> print_endline
 
-let _ = List.map part1 ["day14ex1.dat"; "day14ex2.dat"; "day14.dat"]
+
+let part2 file = 
+  let formula = file
+    |> Utils.read_lines
+    |> create_cookbook
+    |> expand_fuel_formula in
+  let req_ore = Hashtbl.find formula "ORE" in
+  1000000000000. /. req_ore
+
+
+let _ = ["day14ex1.dat"; "day14ex2.dat"; "day14.dat"]
+  |> List.map part2 
+  |> List.map string_of_float
+  |> List.map print_endline
