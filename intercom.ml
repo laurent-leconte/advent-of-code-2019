@@ -132,6 +132,7 @@ let rec execute prog =
                     | Interactive -> print_endline (string_of_int output_value);
                                      execute prog
                     | Batch       -> execute prog
+                    (* in Coroutine mode, signal there's a new output and hand back control *)
                     | Coroutine   -> prog.state <- ReturningOutput;
                                      prog)
     | Input    -> if prog.mode = Coroutine then begin

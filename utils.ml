@@ -1,3 +1,5 @@
+(* to compile: `ocamlc unix.cma utils.ml` *)
+
 let read_lines name =
   let ic = open_in name in
   let try_read () =
@@ -25,8 +27,21 @@ let rec transpose = function
    | rows    -> 
        List.map List.hd rows :: transpose (List.map List.tl rows)
 
+(* take a sprite-to-string function and a canvas (a 2D-array of sprites);
+  print the canvas out to stdin *)
 let print_canvas string_of_sprite canvas = 
   let lists = Array.to_list (Array.map Array.to_list canvas) in
   let print_line l = 
     l |> List.map (string_of_sprite) |> String.concat "" |> print_endline in
   List.map print_line (List.rev (transpose lists))
+
+(* read 1 char from the keyboard.
+Taken from https://stackoverflow.com/questions/13410159/how-to-read-a-character-in-ocaml-without-a-return-key *)
+let get1char () =
+    let termio = Unix.tcgetattr Unix.stdin in
+    let () =
+        Unix.tcsetattr Unix.stdin Unix.TCSADRAIN
+            { termio with Unix.c_icanon = false } in
+    let res = input_char stdin in
+    Unix.tcsetattr Unix.stdin Unix.TCSADRAIN termio;
+    res
